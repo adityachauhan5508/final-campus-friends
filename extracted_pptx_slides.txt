@@ -1,0 +1,49 @@
+﻿
+=== SLIDE slide1.xml ===
+Smart Campus Assistant  |  Aarambhathon 2.0 01 AARAMBHATHON 2.0  |  AI, AUTOMATION &amp; INTELLIGENT SYSTEMS Smart Campus Assistant Ask the campus. Get the official answer. Verified answers · direct actions November 2026 Ask a question about campus... ANSWER Confidence: High Open the right form or office
+
+=== SLIDE slide2.xml ===
+THE PITCH Smart Campus Assistant  |  Aarambhathon 2.0 02 Exam dates, hall tickets, fee deadlines, hostel rules, &quot;where is my exam hall&quot; — answered from official campus documents only, with the confidence level shown and a button that takes you straight to the right form, portal or office. 1 Official only Answers come from official campus documents only. Nothing is pulled from outside sources. 2 Confidence shown The confidence level appears with each answer, so students know how far to trust it. 3 Direct action A button takes you straight to the right form, portal or office for the job. 4 Venue questions Questions about where to go light up the building on the campus map.
+
+=== SLIDE slide3.xml ===
+WHAT STUDENTS CAN ASK Smart Campus Assistant  |  Aarambhathon 2.0 03 Try one of these — the sample questions the assistant is built to answer. EXAMS “When is the deadline for exam registration?” EXAMS “Where is the Aryabhata Examination Center?” FEES “What is the fee payment deadline for Semester IV?” LEAVE “How do I apply for medical leave?” HOSTEL “Are electric kettles allowed in hostel rooms?” ATTENDANCE “What is the minimum attendance requirement?” Each question is answered from the matching official document, with the confidence level and a next-step button.
+
+=== SLIDE slide4.xml ===
+THE PROBLEM Smart Campus Assistant  |  Aarambhathon 2.0 04 Problem Statement: Smart Campus Assistant   |   Theme: AI, Automation &amp; Intelligent Systems WHAT IS HAPPENING Students repeatedly ask similar questions about classrooms, clubs, events, facilities, deadlines and university processes. Information is often distributed across notices, websites, PDFs and social channels, making it difficult to find the right answer quickly. Scattered Answers live across notices, websites, PDFs and social channels. Repeated The same questions come back again and again. Unclear Even with the answer, the right form or office is often unclear.
+
+=== SLIDE slide5.xml ===
+OUR SOLUTION Smart Campus Assistant  |  Aarambhathon 2.0 05 Retrieval, verification, then action 01 RETRIEVE Matches the question against the campus knowledge base. 02 VERIFY Writes the answer only from matched documents and scores confidence. 03 ACT Gives the exact form, portal or office, and highlights venues on the map. Sourced, never invented. Confidence shown up front. Escalated, not dropped.
+
+=== SLIDE slide6.xml ===
+STEP 1: RETRIEVE Smart Campus Assistant  |  Aarambhathon 2.0 06 The question is matched against the campus knowledge base — handbook clauses, circulars, notices, the form registry and office contacts. Handbook clauses Circulars Notices Form registry Office contacts MATCHED QUESTION The most relevant passages are selected from across all sources, so one question can draw on several documents. 33 documents are indexed in the demo campus.
+
+=== SLIDE slide7.xml ===
+STEP 2: VERIFY Smart Campus Assistant  |  Aarambhathon 2.0 07 The answer is written only from matched documents and carries a confidence score. Below the threshold nothing is guessed: it goes to staff. ANSWER FROM MATCHED DOCUMENTS ONLY Source: campus document, clause and page shown CONFIDENCE FLOOR 75% At or above: answer shown. Below: routed to staff.
+
+=== SLIDE slide8.xml ===
+STEP 3: ACT Smart Campus Assistant  |  Aarambhathon 2.0 08 You leave with the exact form, portal or office for the job — and venue questions light up the building on the campus map. Form Opens the exact form in the digital form registry. Portal Links to the right student portal for the task. Office Shows the office contact for the matter. Map Highlights the building for venue questions.
+
+=== SLIDE slide9.xml ===
+THE KNOWLEDGE BASE Smart Campus Assistant  |  Aarambhathon 2.0 09 One verified knowledge base EXAMINATIONS Examination Ordinance and hall-ticket rules FEES Fee circulars, scholarships and refund rules HOSTEL Hostel bylaws, mess and appliance policy ACADEMICS Leave, attendance and grading regulations DIRECTORY Digital form registry and office contacts
+
+=== SLIDE slide10.xml ===
+
+
+=== SLIDE slide11.xml ===
+TRUST BY DESIGN Smart Campus Assistant  |  Aarambhathon 2.0 11 Sourced, never invented Every reply lists the campus documents behind it, with the clause and page, so students can check it themselves. Confidence shown up front High-confidence answers are given plainly. Shaky ones say so instead of dressing up a guess. Students can always see where an answer came from and how confident the assistant is before they act on it.
+
+=== SLIDE slide12.xml ===
+ESCALATED, NOT DROPPED Smart Campus Assistant  |  Aarambhathon 2.0 12 1 Student asks A question falls below the confidence floor. 2 Logged The student&apos;s wording is recorded. 3 Staff inbox Sent with the student&apos;s context. 4 Resolved The answer flows back to the student. Unanswered questions reach a person instead of being dropped or guessed.
+
+=== SLIDE slide13.xml ===
+THE STAFF SIDE Smart Campus Assistant  |  Aarambhathon 2.0 13 Questions the assistant cannot answer go to a person. ANSWER ONCE Staff answer the escalated question once. That answer becomes a campus document, and the next student gets an instant, cited reply. THE DASHBOARD SHOWS What students keep asking How often the assistant escalates Which documents are doing the work A loop that improves the knowledge base with every resolved question.
+
+=== SLIDE slide14.xml ===
+OFFLINE CAMPUS MAP Smart Campus Assistant  |  Aarambhathon 2.0 14 Building 1 Building 2 Building 3 Building 4 Building 5 Building 6 Highlighted: searched building Campus map Offline, drawn plan of the campus Venue search across the map Building highlighting from assistant answers 6 buildings mapped in the demo
+
+=== SLIDE slide15.xml ===
+THE WEBSITE Smart Campus Assistant  |  Aarambhathon 2.0 15 Home Headline, sample questions and key numbers Assistant Ask a question and get a verified, sourced answer Campus map Offline plan with venue search My questions History of the questions asked
+
+=== SLIDE slide16.xml ===
+Smart Campus Assistant  |  Aarambhathon 2.0 16 Smart Campus Assistant Ask the campus. Get the official answer. WE DON&apos;T JUST IDENTIFY PROBLEMS. WE ENGINEER THE FUTURE. Aarambhathon 2.0
+
