@@ -64,23 +64,74 @@ function calculateRelevanceScore(queryTokens, doc) {
 
 /**
  * Step 1: RETRIEVE
- * Retrieves matching campus document passages from the knowledge base
+ * Retrieves matching campus document passages from the knowledge base.
+ * PRIORITY ORDER:
+ *   1. Published staff-uploaded docs (sourceType includes 'Staff Upload' or status = 'published')
+ *   2. Official Staff Resolutions
+ *   3. Default knowledge base documents
+ * Only ACTIVE (published/approved) documents are retrieved — never drafts.
  */
 export function retrieveDocuments(query, documents = CAMPUS_DOCUMENTS) {
   const queryTokens = tokenize(query);
   if (queryTokens.length === 0) return [];
 
-  const scoredDocs = documents
-    .filter(doc => doc.isActive)
+  // Also check published FAQs from localStorage
+  let faqDocs = [];
+  try {
+    const faqs = JSON.parse(localStorage.getItem('sca_faqs') || '[]');
+    faqDocs = faqs
+      .filter(f => f.status === 'published')
+      .map(f => ({
+        id: f.id,
+        code: `FAQ-${f.id}`,
+        title: f.question,
+        category: f.category,
+        sourceType: 'Published FAQ',
+        clause: `FAQ Entry`,
+        isActive: true,
+        status: 'published',
+        summary: f.answer.slice(0, 200),
+        content: f.answer,
+        keywords: tokenize(f.question),
+        isFAQ: true,
+        // Priority boost: FAQ entries are verified answers
+        priorityBoost: 20,
+      }));
+  } catch {}
+
+  const allDocs = [...documents, ...faqDocs];
+
+  const scoredDocs = allDocs
+    .filter(doc => {
+      // NEVER retrieve drafts or pending approval docs — only active/published
+      const docStatus = doc.status || (doc.isActive ? 'published' : 'draft');
+      return doc.isActive || docStatus === 'published';
+    })
     .map(doc => {
-      const relevanceScore = calculateRelevanceScore(queryTokens, doc);
-      return {
-        ...doc,
-        relevanceScore
-      };
+      let relevanceScore = calculateRelevanceScore(queryTokens, doc);
+
+      // Priority boost: staff-uploaded published docs rank higher
+      const srcType = (doc.sourceType || '').toLowerCase();
+      if (srcType.includes('staff upload') || srcType.includes('official staff resolution')) {
+        relevanceScore = Math.min(100, relevanceScore + 15);
+      }
+      if (doc.isFAQ) {
+        relevanceScore = Math.min(100, relevanceScore + (doc.priorityBoost || 0));
+      }
+
+      return { ...doc, relevanceScore };
     })
     .filter(doc => doc.relevanceScore > 20)
-    .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    .sort((a, b) => {
+      // Sort by relevance, with staff-uploaded content first on ties
+      if (Math.abs(a.relevanceScore - b.relevanceScore) < 5) {
+        const aIsStaff = (a.sourceType || '').includes('Staff');
+        const bIsStaff = (b.sourceType || '').includes('Staff');
+        if (aIsStaff && !bIsStaff) return -1;
+        if (!aIsStaff && bIsStaff) return 1;
+      }
+      return b.relevanceScore - a.relevanceScore;
+    });
 
   return scoredDocs.slice(0, 4); // Top 4 matches
 }

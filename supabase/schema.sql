@@ -33,9 +33,22 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT NOT NULL UNIQUE,
     full_name TEXT,
     role user_role NOT NULL DEFAULT 'student',
+    -- Personal details
+    phone TEXT,
     student_id TEXT,
     department TEXT,
+    course TEXT,
+    academic_year TEXT,
     semester TEXT,
+    date_of_birth DATE,
+    -- Profile picture (Supabase Storage)
+    profile_picture_url TEXT,
+    profile_picture_path TEXT,
+    -- Preferences (JSONB for flexibility)
+    notification_preferences JSONB NOT NULL DEFAULT '{"email_notifications":true,"in_app_notifications":true,"campus_announcements":true}'::jsonb,
+    privacy_settings JSONB NOT NULL DEFAULT '{"profile_visibility":"private"}'::jsonb,
+    -- Auth tracking
+    last_login TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -301,3 +314,157 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+
+-- ====================================================================
+-- 13. SUPABASE STORAGE - AVATARS BUCKET & RLS POLICIES
+-- ====================================================================
+
+-- Create the avatars bucket (run once in Supabase dashboard or via API)
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true)
+-- ON CONFLICT (id) DO NOTHING;
+
+-- Storage RLS: users can only manage their own avatar folder
+-- Path must start with their own user ID: avatars/{user_id}/
+
+CREATE POLICY "Avatar upload: own folder only"
+ON storage.objects FOR INSERT
+WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = 'avatars'
+    AND (storage.foldername(name))[2] = auth.uid()::text
+);
+
+CREATE POLICY "Avatar update: own folder only"
+ON storage.objects FOR UPDATE
+USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[2] = auth.uid()::text
+);
+
+CREATE POLICY "Avatar delete: own folder only"
+ON storage.objects FOR DELETE
+USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[2] = auth.uid()::text
+);
+
+-- Public read access for avatar images (they're served via public URL)
+CREATE POLICY "Avatar public read"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+
+-- ====================================================================
+-- 14. PROFILE RLS POLICIES (UPDATE to include new columns)
+-- ====================================================================
+
+-- Users can update their own profile (including new columns)
+-- (Original SELECT/INSERT policies remain from section 11.3)
+-- If the original UPDATE policy exists, this replaces it safely:
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+
+CREATE POLICY "Users can update own profile"
+ON public.profiles FOR UPDATE
+USING (auth.uid() = id)
+WITH CHECK (
+    -- Users can NEVER self-assign staff or admin roles
+    role = 'student'
+    OR
+    -- Existing role preserved (only admins can change roles via service key)
+    role = (SELECT role FROM public.profiles WHERE id = auth.uid())
+);
+
+-- ====================================================================
+-- 15. UPDATE TRIGGER FOR updated_at
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_profiles_updated_at ON public.profiles;
+CREATE TRIGGER set_profiles_updated_at
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ====================================================================
+-- 16. FAQ ENTRIES TABLE (Learn from Resolved Questions — Section G)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.faq_entries (
+    id TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'General',
+    source_escalation_id TEXT REFERENCES public.escalations(id) ON DELETE SET NULL,
+    created_by TEXT,
+    approved_by TEXT,
+    approved_at TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'pending_approval'
+        CHECK (status IN ('pending_approval', 'published', 'archived')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_faq_status ON public.faq_entries(status);
+CREATE INDEX IF NOT EXISTS idx_faq_category ON public.faq_entries(category);
+
+ALTER TABLE public.faq_entries ENABLE ROW LEVEL SECURITY;
+
+-- Only staff can create/update/delete FAQs
+CREATE POLICY "Staff can manage FAQ entries"
+ON public.faq_entries FOR ALL
+USING (public.is_staff());
+
+-- Published FAQs are readable by all authenticated users
+CREATE POLICY "Published FAQs readable by authenticated users"
+ON public.faq_entries FOR SELECT
+USING (status = 'published' AND auth.role() = 'authenticated');
+
+-- ====================================================================
+-- 17. ADD STATUS + FILE COLUMNS TO campus_documents
+-- ====================================================================
+ALTER TABLE public.campus_documents
+    ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'published'
+        CHECK (status IN ('draft', 'processing', 'pending_approval', 'published', 'archived', 'failed')),
+    ADD COLUMN IF NOT EXISTS version TEXT DEFAULT '1.0',
+    ADD COLUMN IF NOT EXISTS file_type TEXT,
+    ADD COLUMN IF NOT EXISTS storage_path TEXT,
+    ADD COLUMN IF NOT EXISTS uploaded_by UUID REFERENCES auth.users(id),
+    ADD COLUMN IF NOT EXISTS extraction_status TEXT DEFAULT 'pending',
+    ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- Ensure only published docs are served to students (update existing RLS)
+-- Existing docs without status default to 'published' for backwards compatibility
+DROP POLICY IF EXISTS "Campus documents readable by all authenticated users" ON public.campus_documents;
+
+CREATE POLICY "Only published campus documents readable by students"
+ON public.campus_documents FOR SELECT
+USING (
+    (is_active = true AND (status IS NULL OR status = 'published'))
+    OR public.is_staff()  -- Staff can see all statuses
+);
+
+-- ====================================================================
+-- 18. SUPABASE STORAGE — campus-docs BUCKET
+-- ====================================================================
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('campus-docs', 'campus-docs', false)
+-- ON CONFLICT (id) DO NOTHING;
+
+-- Staff can upload to campus-docs
+CREATE POLICY "Staff can upload campus documents"
+ON storage.objects FOR INSERT
+WITH CHECK (
+    bucket_id = 'campus-docs'
+    AND public.is_staff()
+);
+
+-- Staff can read campus documents  
+CREATE POLICY "Staff can read campus documents"
+ON storage.objects FOR SELECT
+USING (
+    bucket_id = 'campus-docs'
+    AND public.is_staff()
+);

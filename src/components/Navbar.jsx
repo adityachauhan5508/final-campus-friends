@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { CurrentUserAvatar } from './Avatar';
+import ProfileDropdown from './ProfileDropdown';
 
 export default function Navbar({ activePage, setActivePage, onOpenStaffDashboard, pendingEscalationsCount = 0 }) {
+  const { isAuthenticated, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen]     = useState(false);
 
   // Exactly the 4 required primary student destinations (Section 3 of Master Prompt)
   const navItems = [
@@ -91,14 +96,45 @@ export default function Navbar({ activePage, setActivePage, onOpenStaffDashboard
             })}
           </nav>
 
-          {/* Right Header Area: Student Profile & Protected Staff Access */}
+          {/* Right Header Area: Auth Profile / Sign In + Staff Portal */}
           <div className="hidden sm:flex items-center gap-3">
-            {/* Student ID badge */}
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-campus-border text-xs text-campus-text">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="font-medium text-slate-700">Aarav S.</span>
-              <span className="text-slate-400">· Sem IV</span>
-            </div>
+
+            {/* Auth: Show avatar dropdown if signed in, Sign In button if not */}
+            {!loading && (
+              isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen(prev => !prev)}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors focus:outline-none"
+                    title="Account menu"
+                  >
+                    <CurrentUserAvatar size="sm" />
+                    <svg className="w-3 h-3 text-campus-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {dropdownOpen && (
+                    <ProfileDropdown
+                      onClose={() => setDropdownOpen(false)}
+                      onNavigate={(page) => {
+                        setActivePage(page);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleNavClick('login')}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold border border-campus-border text-campus-navy hover:bg-slate-50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Sign In
+                </button>
+              )
+            )}
 
             {/* Separate Protected Staff Dashboard Access */}
             <button
@@ -120,6 +156,35 @@ export default function Navbar({ activePage, setActivePage, onOpenStaffDashboard
 
           {/* Mobile Menu Hamburger */}
           <div className="flex items-center sm:hidden gap-2">
+            {/* Mobile auth avatar */}
+            {!loading && isAuthenticated && (
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(prev => !prev)}
+                  className="focus:outline-none"
+                >
+                  <CurrentUserAvatar size="sm" />
+                </button>
+                {dropdownOpen && (
+                  <ProfileDropdown
+                    onClose={() => setDropdownOpen(false)}
+                    onNavigate={(page) => {
+                      setActivePage(page);
+                      setMobileMenuOpen(false);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            {!loading && !isAuthenticated && (
+              <button
+                onClick={() => handleNavClick('login')}
+                className="text-xs font-semibold text-campus-blue border border-campus-blue px-2 py-1 rounded-lg"
+              >
+                Sign In
+              </button>
+            )}
             <button
               onClick={onOpenStaffDashboard}
               className="p-1.5 rounded-md text-xs font-semibold bg-campus-navy text-white flex items-center gap-1"
@@ -176,7 +241,7 @@ export default function Navbar({ activePage, setActivePage, onOpenStaffDashboard
           <div className="pt-3 mt-2 border-t border-campus-border flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>Aarav S. (Sem IV)</span>
+              <span>Smart Campus</span>
             </div>
             <button
               onClick={() => {

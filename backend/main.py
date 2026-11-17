@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.config import CORS_ORIGINS, is_gemini_configured, is_supabase_configured
 from backend.routes.query import router as query_router
 from backend.routes.staff import router as staff_router
+from backend.routes.auth import router as auth_router
 
 app = FastAPI(
     title="Smart Campus Assistant API",
@@ -23,6 +24,7 @@ app.add_middleware(
 # Mount Routes
 app.include_router(query_router)
 app.include_router(staff_router)
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 @app.get("/")
 async def root():

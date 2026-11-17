@@ -144,3 +144,33 @@ VALUES
   '[{"docTitle": "Technical & Cultural Student Clubs Charter 2026", "clause": "Section 4.1", "relevanceScore": 54}]'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- ====================================================================
+-- ADDITIONAL SEED: FAQ Starter Data (from smart_campus_faq_starter.csv)
+-- ====================================================================
+INSERT INTO public.faq_entries (id, question, answer, category, status, created_by) VALUES
+('FAQ-SEED-001', 'Where can I find the academic calendar?',
+ 'Check the latest academic calendar published by the university or department. Confirm semester dates, holidays, registration windows and examination periods from the current official calendar.',
+ 'Academics', 'pending_approval', 'System'),
+('FAQ-SEED-002', 'Where can I find the examination timetable?',
+ 'Check the latest examination notice on the official university portal or examination office notice board. Verify programme, semester, subject and date.',
+ 'Examinations', 'pending_approval', 'System'),
+('FAQ-SEED-003', 'Where can I check my fee payment status?',
+ 'Check the fee or payment section of the official student portal. Keep the transaction reference and receipt. If the portal does not update, contact the accounts office.',
+ 'Fees', 'pending_approval', 'System'),
+('FAQ-SEED-004', 'How can I apply for hostel accommodation?',
+ 'Check the official hostel admission notice or contact the hostel office. Availability, eligibility, fees, documents and dates depend on current rules.',
+ 'Hostel', 'pending_approval', 'System'),
+('FAQ-SEED-005', 'Where can I find the campus map?',
+ 'Open the Campus Map section of the Smart Campus Assistant. If a building or room is not listed, contact the campus help desk or relevant department.',
+ 'Facilities', 'pending_approval', 'System'),
+('FAQ-SEED-006', 'What if I cannot log in to the student portal?',
+ 'Use the official password reset option if available. If the problem continues, contact the university IT help desk. Never share your password or one-time code.',
+ 'IT Support', 'pending_approval', 'System'),
+('FAQ-SEED-007', 'How do I apply for leave?',
+ 'Use the university''s approved leave process and submit required supporting documents. The correct form, approving authority and deadline depend on current institutional rules.',
+ 'Academics', 'pending_approval', 'System'),
+('FAQ-SEED-008', 'What if my question is not covered here?',
+ 'Submit it through the Smart Campus Assistant. If approved campus information does not provide a reliable answer, the system will forward it to authorized staff.',
+ 'General', 'published', 'System')
+ON CONFLICT (id) DO NOTHING;
