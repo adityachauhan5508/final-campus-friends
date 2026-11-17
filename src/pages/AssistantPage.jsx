@@ -5,6 +5,8 @@ import ActionCard from '../components/ActionCard';
 import { SAMPLE_QUESTIONS, LOW_CONFIDENCE_DEMO_QUERIES } from '../data/sampleQuestions';
 import { processCampusQuery, CONFIDENCE_FLOOR } from '../services/queryEngine';
 import { addQuestionToHistory, addEscalation, getStoredDocuments } from '../services/storage';
+import { executeCampusQuery, checkBackendHealth } from '../services/apiService';
+import { saveQuestionToDB, saveEscalationToDB, isSupabaseConfigured } from '../services/supabaseClient';
 
 export default function AssistantPage({ initialQuery, onNavigateToMap, onRefreshEscalationsCount }) {
   const [inputQuery, setInputQuery] = useState(initialQuery || '');
@@ -38,10 +40,9 @@ export default function AssistantPage({ initialQuery, onNavigateToMap, onRefresh
       setTimeout(() => {
         // Step 3: ACT and finalize
         setProcessingStep('acting');
-        setTimeout(() => {
+        setTimeout(async () => {
           try {
-            const allDocs = getStoredDocuments();
-            const result = processCampusQuery(q, allDocs);
+            const result = await executeCampusQuery(q);
             setCurrentResponse({
               query: q,
               ...result,
@@ -62,6 +63,7 @@ export default function AssistantPage({ initialQuery, onNavigateToMap, onRefresh
               escalationReason: result.escalationReason || null
             };
             addQuestionToHistory(historyItem);
+            saveQuestionToDB(historyItem);
 
             // If below 75% floor -> Escalate to Staff Inbox!
             if (!result.isAboveFloor) {
@@ -76,7 +78,7 @@ export default function AssistantPage({ initialQuery, onNavigateToMap, onRefresh
                 retrievedWeakMatches: (result.retrievedPassages || []).map(p => ({
                   docTitle: p.title,
                   clause: p.clause,
-                  relevanceScore: p.relevanceScore,
+                  relevanceScore: p.relevanceScore || p.score,
                   snippet: p.summary
                 })),
                 escalationReason: result.escalationReason,
@@ -86,6 +88,7 @@ export default function AssistantPage({ initialQuery, onNavigateToMap, onRefresh
                 resolvedAt: null
               };
               addEscalation(escalationItem);
+              saveEscalationToDB(escalationItem);
               if (onRefreshEscalationsCount) onRefreshEscalationsCount();
             }
 
