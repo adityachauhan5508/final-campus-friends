@@ -33,3 +33,6 @@ venv/
 
 backend/py_runtime/
 backend/__pycache__/
+
+backend/.env
+*.env
