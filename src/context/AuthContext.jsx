@@ -16,9 +16,10 @@ export function AuthProvider({ children }) {
 
   // ── Fetch or auto-initialize profile in Supabase ──────────────────────────
   const fetchProfile = useCallback(async (userId, userMetadata = null, userEmail = null) => {
-    if (!supabase) return;
+    if (!supabase || !userId) return null;
     try {
-      const { data, error } = await supabase
+      // 1. Check if profile exists by user id
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -28,18 +29,43 @@ export function AuthProvider({ children }) {
         console.warn('Profile fetch warning:', error.message);
       }
 
+      // 2. If not found by ID, also check by email to safely link existing accounts
+      if (!data && userEmail) {
+        const { data: existingByEmail } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', userEmail.trim().toLowerCase())
+          .maybeSingle();
+
+        if (existingByEmail) {
+          data = existingByEmail;
+        }
+      }
+
+      // 3. If profile already exists, preserve all fields (including existing staff role)
       if (data) {
         setProfile(data);
         return data;
       }
 
-      // If profile record does not exist yet (e.g. freshly registered user),
-      // create it automatically to ensure the student has their profile
+      // 4. Create new student profile (Google OAuth or email registration)
+      const resolvedName =
+        userMetadata?.full_name ||
+        userMetadata?.name ||
+        userMetadata?.user_name ||
+        (userEmail ? userEmail.split('@')[0] : 'Student User');
+
+      const resolvedAvatar =
+        userMetadata?.avatar_url ||
+        userMetadata?.picture ||
+        null;
+
       const newProfile = {
         id: userId,
-        email: userEmail || '',
-        full_name: userMetadata?.full_name || 'Student User',
-        role: 'student',
+        email: (userEmail || '').trim().toLowerCase(),
+        full_name: resolvedName,
+        role: 'student', // Strictly assign student role; never grant staff privileges
+        profile_picture_url: resolvedAvatar,
         notification_preferences: {
           email_notifications: true,
           in_app_notifications: true,
@@ -53,7 +79,7 @@ export function AuthProvider({ children }) {
 
       const { data: inserted, error: insertError } = await supabase
         .from('profiles')
-        .insert([newProfile])
+        .upsert(newProfile, { onConflict: 'id' })
         .select()
         .maybeSingle();
 
@@ -61,7 +87,7 @@ export function AuthProvider({ children }) {
         setProfile(inserted);
         return inserted;
       } else {
-        // Fallback to minimal profile in state so user can access their account
+        // Fallback to local profile state so student can seamlessly access their dashboard
         setProfile(newProfile);
         return newProfile;
       }
@@ -180,19 +206,25 @@ export function AuthProvider({ children }) {
   const signInWithGoogle = async () => {
     setAuthError(null);
     if (!supabase) {
-      return { error: { message: 'Database connection is not configured.' } };
+      const msg = 'Database connection is not configured.';
+      setAuthError(msg);
+      return { error: { message: msg } };
     }
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        },
       },
     });
     if (error) {
       setAuthError(error.message);
       return { error };
     }
-    return { error: null };
+    return { data, error: null };
   };
 
   // ── Sign Out ──────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 // ─── Shared University Auth Layout Wrapper ────────────────────────────────────
@@ -105,6 +105,24 @@ export function LoginPage({ onNavigate }) {
   const [error, setError]             = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
+  useEffect(() => {
+    // Check URL parameters and hash for OAuth errors (e.g. user cancelled Google auth)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const errorParam = urlParams.get('error') || hashParams.get('error');
+    const errorDesc = urlParams.get('error_description') || hashParams.get('error_description');
+
+    if (errorParam) {
+      if (errorParam === 'access_denied' || (errorDesc && errorDesc.toLowerCase().includes('cancel'))) {
+        setError('Google sign-in was cancelled. You can sign in with your email or try Google again.');
+      } else {
+        setError(errorDesc ? decodeURIComponent(errorDesc.replace(/\+/g, ' ')) : 'Google authentication failed. Please try again.');
+      }
+      // Clean up the URL hash/query without page reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const validate = () => {
     const errs = {};
     if (!email) errs.email = 'Email address is required.';
@@ -129,10 +147,13 @@ export function LoginPage({ onNavigate }) {
   };
 
   const handleGoogle = async () => {
+    setError('');
     setLoading(true);
     const { error: authError } = await signInWithGoogle();
     setLoading(false);
-    if (authError) setError(authError.message);
+    if (authError) {
+      setError(authError.message || 'Unable to connect to Google authentication. Please try again.');
+    }
   };
 
   return (
@@ -212,6 +233,33 @@ export function SignupPage({ onNavigate }) {
   const [error, setError]             = useState('');
   const [success, setSuccess]         = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  useEffect(() => {
+    // Check URL parameters and hash for OAuth errors (e.g. user cancelled Google auth)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const errorParam = urlParams.get('error') || hashParams.get('error');
+    const errorDesc = urlParams.get('error_description') || hashParams.get('error_description');
+
+    if (errorParam) {
+      if (errorParam === 'access_denied' || (errorDesc && errorDesc.toLowerCase().includes('cancel'))) {
+        setError('Google sign-up was cancelled. You can try again or register with your email.');
+      } else {
+        setError(errorDesc ? decodeURIComponent(errorDesc.replace(/\+/g, ' ')) : 'Google sign-up failed. Please try again.');
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const handleGoogle = async () => {
+    setError('');
+    setLoading(true);
+    const { error: authError } = await signInWithGoogle();
+    setLoading(false);
+    if (authError) {
+      setError(authError.message || 'Unable to connect to Google authentication. Please try again.');
+    }
+  };
 
   const getPasswordStrength = (pw) => {
     if (!pw) return { score: 0, label: '', color: '' };

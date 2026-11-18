@@ -12,7 +12,7 @@ import io
 import csv
 
 from backend.services.retrieval_service import get_supabase_client
-from backend.config import is_supabase_configured, SUPABASE_URL, SUPABASE_SERVICE_KEY
+from backend.config import is_supabase_configured, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY as SUPABASE_SERVICE_KEY
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/staff", tags=["Staff Administration"])
