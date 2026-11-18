@@ -98,7 +98,7 @@ function GoogleButton({ onClick, loading, label }) {
 
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
 export function LoginPage({ onNavigate }) {
-  const { signIn, signInWithGoogle, isDemoMode } = useAuth();
+  const { signIn, signInAsDemo, signInWithGoogle, isDemoMode } = useAuth();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
@@ -128,6 +128,15 @@ export function LoginPage({ onNavigate }) {
     }
   };
 
+  const handleDemoSignIn = (targetPage = 'account-settings') => {
+    signInAsDemo({
+      fullName: 'Aarav Sharma',
+      email: email.trim() || 'aarav.sharma@student.campus.edu',
+      role: 'student'
+    });
+    onNavigate(targetPage);
+  };
+
   const handleGoogle = async () => {
     setLoading(true);
     const { error: authError } = await signInWithGoogle();
@@ -139,7 +148,7 @@ export function LoginPage({ onNavigate }) {
     <AuthLayout title="Welcome back" subtitle="Sign in to access the Smart Campus Assistant">
       {isDemoMode && (
         <div className="mb-5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
-          <strong>Demo Mode:</strong> Supabase not connected. Enter any email &amp; password to explore.
+          <strong>Demo Mode:</strong> Supabase offline. Enter any email &amp; password to explore.
         </div>
       )}
 
@@ -186,7 +195,19 @@ export function LoginPage({ onNavigate }) {
         <SubmitButton loading={loading} label="Sign In" loadingLabel="Signing in…" />
       </form>
 
-      <div className="relative my-5">
+      {/* Instant Demo Landing Action */}
+      <div className="mt-4 pt-3 border-t border-campus-border">
+        <button
+          type="button"
+          onClick={() => handleDemoSignIn('account-settings')}
+          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 text-campus-blue font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs group"
+        >
+          <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
+          <span>Launch Demo Student Account &rarr; Open Profile</span>
+        </button>
+      </div>
+
+      <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-campus-border" />
         </div>
@@ -209,7 +230,7 @@ export function LoginPage({ onNavigate }) {
 
 // ─── SIGNUP PAGE ──────────────────────────────────────────────────────────────
 export function SignupPage({ onNavigate }) {
-  const { signUp, signInWithGoogle, isDemoMode } = useAuth();
+  const { signUp, signInAsDemo, signInWithGoogle, isDemoMode } = useAuth();
   const [fullName, setFullName]       = useState('');
   const [email, setEmail]             = useState('');
   const [password, setPassword]       = useState('');
@@ -374,6 +395,25 @@ export function SignupPage({ onNavigate }) {
 
         <SubmitButton loading={loading} label="Create Account" loadingLabel="Creating account…" />
       </form>
+
+      {/* Instant Demo Landing Action */}
+      <div className="mt-4 pt-3 border-t border-campus-border">
+        <button
+          type="button"
+          onClick={() => {
+            signInAsDemo({
+              fullName: fullName.trim() || 'Aarav Sharma',
+              email: email.trim() || 'aarav.sharma@student.campus.edu',
+              role: 'student'
+            });
+            onNavigate('account-settings');
+          }}
+          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 text-campus-blue font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs group"
+        >
+          <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
+          <span>Instant Demo Student Access &rarr; Open Profile</span>
+        </button>
+      </div>
 
       <div className="relative my-5">
         <div className="absolute inset-0 flex items-center">

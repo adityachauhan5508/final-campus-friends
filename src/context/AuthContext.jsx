@@ -123,6 +123,25 @@ export function AuthProvider({ children }) {
     return { data, error: null };
   };
 
+  // ── Sign In as Demo (Instant demo account) ─────────────────────────────────
+  const signInAsDemo = (demoData = {}) => {
+    const demo = {
+      ...DEMO_USER,
+      email: demoData.email || DEMO_USER.email,
+      user_metadata: { full_name: demoData.fullName || 'Aarav Sharma' }
+    };
+    const prof = {
+      ...DEMO_PROFILE,
+      full_name: demoData.fullName || DEMO_PROFILE.full_name,
+      email: demoData.email || DEMO_PROFILE.email,
+      role: demoData.role || 'student'
+    };
+    setUser(demo);
+    setProfile(prof);
+    sessionStorage.setItem('sca_demo_auth', 'true');
+    return { error: null };
+  };
+
   // ── Sign Up ───────────────────────────────────────────────────────────────
   const signUp = async ({ email, password, fullName }) => {
     setAuthError(null);
@@ -277,6 +296,7 @@ export function AuthProvider({ children }) {
     isAdmin,
     isDemoMode,
     signIn,
+    signInAsDemo,
     signUp,
     signInWithGoogle,
     signOut,

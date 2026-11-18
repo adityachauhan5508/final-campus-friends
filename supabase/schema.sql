@@ -303,12 +303,15 @@ BEGIN
         new.id,
         new.email,
         COALESCE(new.raw_user_meta_data->>'full_name', 'Student User'),
-        COALESCE((new.raw_user_meta_data->>'role')::user_role, 'student')
+        COALESCE((new.raw_user_meta_data->>'role')::public.user_role, 'student'::public.user_role)
     )
     ON CONFLICT (id) DO NOTHING;
     RETURN new;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN new; -- Never fail user signup even if trigger encounters an error
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
