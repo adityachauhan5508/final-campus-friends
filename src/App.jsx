@@ -155,7 +155,7 @@ function AppInner() {
   }
 
   // ── AUTHENTICATED USER — Full Platform ───────────────────────────────────
-  const isStaffMode = viewMode === 'staff';
+  const isStaffMode = viewMode === 'staff' && isStaff;
 
   return (
     <div className="min-h-screen flex flex-col bg-campus-bg text-campus-text">
@@ -187,7 +187,13 @@ function AppInner() {
         <Navbar
           activePage={activePage}
           setActivePage={handleNavigate}
-          onOpenStaffDashboard={() => setViewMode('staff')}
+          onOpenStaffDashboard={() => {
+            if (!isStaff) {
+              alert("Access Restricted: The Staff Portal is reserved for verified university staff and administrative officers. Your current account role is 'student'.");
+              return;
+            }
+            setViewMode('staff');
+          }}
           pendingEscalationsCount={pendingEscalationsCount}
         />
       )}
