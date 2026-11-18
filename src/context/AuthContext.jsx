@@ -1,70 +1,70 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
-// ─── Auth Context ─────────────────────────────────────────────────────────────
 const AuthContext = createContext(null);
 
-// Demo user used when Supabase is not configured (hackathon offline mode)
-const DEMO_USER = {
-  id: 'demo-user-001',
-  email: 'aarav.sharma@student.campus.edu',
-  user_metadata: { full_name: 'Aarav Sharma' },
-};
-
-const DEMO_PROFILE = {
-  id: 'demo-user-001',
-  full_name: 'Aarav Sharma',
-  email: 'aarav.sharma@student.campus.edu',
-  phone: '+91 98765 43210',
-  student_id: 'BCA2023001',
-  department: 'BCA',
-  course: 'Bachelor of Computer Applications',
-  academic_year: 'Second Year',
-  date_of_birth: '2003-08-15',
-  profile_picture_url: null,
-  profile_picture_path: null,
-  role: 'student',
-  notification_preferences: {
-    email_notifications: true,
-    in_app_notifications: true,
-    campus_announcements: true,
-  },
-  privacy_settings: {
-    profile_visibility: 'private',
-  },
-  created_at: '2023-07-01T00:00:00Z',
-  last_login: new Date().toISOString(),
-};
-
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]           = useState(null);
+  const [profile, setProfile]     = useState(null);
+  const [loading, setLoading]     = useState(true);
   const [authError, setAuthError] = useState(null);
-
-  // ── Demo mode (no Supabase) ───────────────────────────────────────────────
-  const isDemoMode = !isSupabaseConfigured();
 
   // ── Derived flags ─────────────────────────────────────────────────────────
   const isAuthenticated = Boolean(user);
   const isStaff  = profile?.role === 'staff'  || profile?.role === 'admin';
   const isAdmin  = profile?.role === 'admin';
 
-  // ── Fetch profile from Supabase ───────────────────────────────────────────
-  const fetchProfile = useCallback(async (userId) => {
+  // ── Fetch or auto-initialize profile in Supabase ──────────────────────────
+  const fetchProfile = useCallback(async (userId, userMetadata = null, userEmail = null) => {
     if (!supabase) return;
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.warn('Profile fetch error:', error.message);
-        return;
+        console.warn('Profile fetch warning:', error.message);
       }
-      setProfile(data);
+
+      if (data) {
+        setProfile(data);
+        return data;
+      }
+
+      // If profile record does not exist yet (e.g. freshly registered user),
+      // create it automatically to ensure the student has their profile
+      const newProfile = {
+        id: userId,
+        email: userEmail || '',
+        full_name: userMetadata?.full_name || 'Student User',
+        role: 'student',
+        notification_preferences: {
+          email_notifications: true,
+          in_app_notifications: true,
+          campus_announcements: true,
+        },
+        privacy_settings: {
+          profile_visibility: 'private',
+        },
+        last_login: new Date().toISOString(),
+      };
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('profiles')
+        .insert([newProfile])
+        .select()
+        .maybeSingle();
+
+      if (!insertError && inserted) {
+        setProfile(inserted);
+        return inserted;
+      } else {
+        // Fallback to minimal profile in state so user can access their account
+        setProfile(newProfile);
+        return newProfile;
+      }
     } catch (err) {
       console.error('fetchProfile error:', err);
     }
@@ -72,13 +72,7 @@ export function AuthProvider({ children }) {
 
   // ── Bootstrap auth session on mount ──────────────────────────────────────
   useEffect(() => {
-    if (isDemoMode) {
-      // Check if user previously "logged in" in demo mode
-      const demoLoggedIn = sessionStorage.getItem('sca_demo_auth') === 'true';
-      if (demoLoggedIn) {
-        setUser(DEMO_USER);
-        setProfile(DEMO_PROFILE);
-      }
+    if (!isSupabaseConfigured() || !supabase) {
       setLoading(false);
       return;
     }
@@ -86,8 +80,14 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.id, session.user.user_metadata, session.user.email);
+      } else {
+        setUser(null);
+        setProfile(null);
       }
+      setLoading(false);
+    }).catch(err => {
+      console.error('getSession error:', err);
       setLoading(false);
     });
 
@@ -95,7 +95,7 @@ export function AuthProvider({ children }) {
       async (_event, session) => {
         if (session?.user) {
           setUser(session.user);
-          await fetchProfile(session.user.id);
+          await fetchProfile(session.user.id, session.user.user_metadata, session.user.email);
         } else {
           setUser(null);
           setProfile(null);
@@ -105,90 +105,109 @@ export function AuthProvider({ children }) {
     );
 
     return () => subscription.unsubscribe();
-  }, [isDemoMode, fetchProfile]);
+  }, [fetchProfile]);
 
-  // ── Sign In ───────────────────────────────────────────────────────────────
+  // ── Sign In (Email + Password) ────────────────────────────────────────────
   const signIn = async ({ email, password }) => {
     setAuthError(null);
-    if (isDemoMode) {
-      // Demo login — accept any credentials
-      setUser(DEMO_USER);
-      setProfile({ ...DEMO_PROFILE, email, full_name: email.split('@')[0] });
-      sessionStorage.setItem('sca_demo_auth', 'true');
-      return { error: null };
+    if (!supabase) {
+      const msg = 'Database connection is not configured.';
+      setAuthError(msg);
+      return { error: { message: msg } };
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setAuthError(error.message); return { error }; }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+      return { error };
+    }
+
+    if (data?.user) {
+      setUser(data.user);
+      await fetchProfile(data.user.id, data.user.user_metadata, data.user.email);
+    }
+
     return { data, error: null };
   };
 
-  // ── Sign In as Demo (Instant demo account) ─────────────────────────────────
-  const signInAsDemo = (demoData = {}) => {
-    const demo = {
-      ...DEMO_USER,
-      email: demoData.email || DEMO_USER.email,
-      user_metadata: { full_name: demoData.fullName || 'Aarav Sharma' }
-    };
-    const prof = {
-      ...DEMO_PROFILE,
-      full_name: demoData.fullName || DEMO_PROFILE.full_name,
-      email: demoData.email || DEMO_PROFILE.email,
-      role: demoData.role || 'student'
-    };
-    setUser(demo);
-    setProfile(prof);
-    sessionStorage.setItem('sca_demo_auth', 'true');
-    return { error: null };
-  };
-
-  // ── Sign Up ───────────────────────────────────────────────────────────────
+  // ── Sign Up (Create Account) ──────────────────────────────────────────────
   const signUp = async ({ email, password, fullName }) => {
     setAuthError(null);
-    if (isDemoMode) {
-      return { error: { message: 'Demo mode: sign up unavailable. Use the demo login.' } };
+    if (!supabase) {
+      const msg = 'Database connection is not configured.';
+      setAuthError(msg);
+      return { error: { message: msg } };
     }
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: {
+          full_name: fullName.trim(),
+        },
+      },
     });
-    if (error) { setAuthError(error.message); return { error }; }
-    return { data, error: null };
+
+    if (error) {
+      setAuthError(error.message);
+      return { error };
+    }
+
+    // Check if email confirmation is required or if a session was created immediately
+    const sessionActive = Boolean(data?.session);
+    const userCreated   = Boolean(data?.user);
+
+    if (sessionActive && data.user) {
+      setUser(data.user);
+      await fetchProfile(data.user.id, { full_name: fullName.trim() }, data.user.email);
+    }
+
+    return {
+      data,
+      sessionActive,
+      userCreated,
+      needsVerification: userCreated && !sessionActive,
+      error: null,
+    };
   };
 
   // ── Google OAuth ──────────────────────────────────────────────────────────
   const signInWithGoogle = async () => {
     setAuthError(null);
-    if (isDemoMode) {
-      return { error: { message: 'Demo mode: Google sign-in unavailable.' } };
+    if (!supabase) {
+      return { error: { message: 'Database connection is not configured.' } };
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
-    if (error) { setAuthError(error.message); return { error }; }
+    if (error) {
+      setAuthError(error.message);
+      return { error };
+    }
     return { error: null };
   };
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
   const signOut = async () => {
-    if (isDemoMode) {
-      sessionStorage.removeItem('sca_demo_auth');
-      setUser(null);
-      setProfile(null);
-      return;
+    if (supabase) {
+      await supabase.auth.signOut();
     }
-    await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   };
 
   // ── Password Reset ────────────────────────────────────────────────────────
   const resetPassword = async (email) => {
-    if (isDemoMode) return { error: { message: 'Demo mode: not supported.' } };
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    if (!supabase) return { error: { message: 'Database connection is not configured.' } };
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
       redirectTo: `${window.location.origin}?page=reset-password`,
     });
     return { error };
@@ -196,28 +215,30 @@ export function AuthProvider({ children }) {
 
   // ── Update Profile Fields ─────────────────────────────────────────────────
   const updateProfile = async (fields) => {
-    if (isDemoMode) {
-      setProfile(prev => ({ ...prev, ...fields }));
-      return { error: null };
-    }
     if (!supabase || !user) return { error: { message: 'Not authenticated' } };
+
+    // Prevent changing role from student to staff/admin via client
+    const safeFields = { ...fields };
+    delete safeFields.role;
+    delete safeFields.id;
 
     const { data, error } = await supabase
       .from('profiles')
-      .update({ ...fields, updated_at: new Date().toISOString() })
+      .update({ ...safeFields, updated_at: new Date().toISOString() })
       .eq('id', user.id)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (!error && data) setProfile(data);
-    return { error };
+    if (!error && data) {
+      setProfile(data);
+    }
+    return { data, error };
   };
 
-  // ── Upload Profile Picture ────────────────────────────────────────────────
+  // ── Upload Profile Picture (Supabase Storage) ─────────────────────────────
   const uploadProfilePicture = async (file) => {
-    if (!user) return { error: { message: 'Not authenticated' } };
+    if (!user || !supabase) return { error: { message: 'Not authenticated' } };
 
-    // Client-side validation
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       return { error: { message: 'Only JPEG, PNG, and WebP images are allowed.' } };
@@ -226,18 +247,12 @@ export function AuthProvider({ children }) {
       return { error: { message: 'Image must be under 2 MB.' } };
     }
 
-    if (isDemoMode) {
-      // Create a local object URL for demo preview
-      const url = URL.createObjectURL(file);
-      setProfile(prev => ({ ...prev, profile_picture_url: url, profile_picture_path: 'demo/avatar.jpg' }));
-      return { url, error: null };
-    }
-
     const ext = file.name.split('.').pop();
     const filePath = `avatars/${user.id}/avatar.${ext}`;
 
-    // Remove old file first (ignore errors — it may not exist)
-    await supabase.storage.from('avatars').remove([`avatars/${user.id}/avatar.jpg`, `avatars/${user.id}/avatar.png`, `avatars/${user.id}/avatar.webp`]);
+    await supabase.storage
+      .from('avatars')
+      .remove([`avatars/${user.id}/avatar.jpg`, `avatars/${user.id}/avatar.png`, `avatars/${user.id}/avatar.webp`]);
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
@@ -248,10 +263,13 @@ export function AuthProvider({ children }) {
     const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
     const publicUrl = urlData?.publicUrl;
 
-    // Persist URL to profile
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ profile_picture_url: publicUrl, profile_picture_path: filePath, updated_at: new Date().toISOString() })
+      .update({
+        profile_picture_url: publicUrl,
+        profile_picture_path: filePath,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', user.id);
 
     if (!profileError) {
@@ -263,12 +281,7 @@ export function AuthProvider({ children }) {
 
   // ── Remove Profile Picture ────────────────────────────────────────────────
   const removeProfilePicture = async () => {
-    if (!user) return { error: { message: 'Not authenticated' } };
-
-    if (isDemoMode) {
-      setProfile(prev => ({ ...prev, profile_picture_url: null, profile_picture_path: null }));
-      return { error: null };
-    }
+    if (!user || !supabase) return { error: { message: 'Not authenticated' } };
 
     if (profile?.profile_picture_path) {
       await supabase.storage.from('avatars').remove([profile.profile_picture_path]);
@@ -276,7 +289,11 @@ export function AuthProvider({ children }) {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ profile_picture_url: null, profile_picture_path: null, updated_at: new Date().toISOString() })
+      .update({
+        profile_picture_url: null,
+        profile_picture_path: null,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', user.id);
 
     if (!error) {
@@ -294,9 +311,7 @@ export function AuthProvider({ children }) {
     isAuthenticated,
     isStaff,
     isAdmin,
-    isDemoMode,
     signIn,
-    signInAsDemo,
     signUp,
     signInWithGoogle,
     signOut,
@@ -310,7 +325,6 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// ── Hook ───────────────────────────────────────────────────────────────────────
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');

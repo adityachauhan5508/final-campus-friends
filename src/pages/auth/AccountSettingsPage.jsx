@@ -302,7 +302,7 @@ function PictureTab() {
 
 // ── SECURITY TAB ──────────────────────────────────────────────────────────────
 function SecurityTab() {
-  const { user, profile, isDemoMode } = useAuth();
+  const { user, profile } = useAuth();
   const [oldPw, setOldPw]     = useState('');
   const [newPw, setNewPw]     = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -318,14 +318,10 @@ function SecurityTab() {
       setStatus({ type: 'error', message: 'New passwords do not match.' });
       return;
     }
-    if (isDemoMode) {
-      setStatus({ type: 'error', message: 'Demo mode: password change not available.' });
-      return;
-    }
     setLoading(true);
     const { error } = supabase
       ? await supabase.auth.updateUser({ password: newPw })
-      : { error: { message: 'Supabase not configured.' } };
+      : { error: { message: 'Database connection not available.' } };
     setLoading(false);
     if (error) {
       setStatus({ type: 'error', message: error.message });
@@ -366,8 +362,8 @@ function SecurityTab() {
               <p className="text-sm font-medium text-campus-text">Email verification</p>
               <p className="text-xs text-campus-muted">{user?.email}</p>
             </div>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${user?.email_confirmed_at || isDemoMode ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-              {user?.email_confirmed_at || isDemoMode ? '✓ Verified' : 'Unverified'}
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${user?.email_confirmed_at ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+              {user?.email_confirmed_at ? '✓ Verified' : 'Pending Verification'}
             </span>
           </div>
           <div className="flex items-center justify-between py-2.5 border-b border-campus-border">

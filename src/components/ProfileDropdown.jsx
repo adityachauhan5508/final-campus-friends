@@ -7,7 +7,7 @@ import { CurrentUserAvatar } from './Avatar';
  * Closes when the user clicks outside.
  */
 export default function ProfileDropdown({ onClose, onNavigate }) {
-  const { user, profile, signOut, isDemoMode } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const ref = useRef(null);
 
   // Close on outside click
@@ -50,11 +50,6 @@ export default function ProfileDropdown({ onClose, onNavigate }) {
             </span>
           </div>
         </div>
-        {isDemoMode && (
-          <p className="mt-2 text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-            Demo mode — Supabase not connected
-          </p>
-        )}
       </div>
 
       {/* Links */}

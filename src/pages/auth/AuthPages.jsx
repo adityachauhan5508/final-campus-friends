@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-// ─── Shared Auth Layout Wrapper ───────────────────────────────────────────────
+// ─── Shared University Auth Layout Wrapper ────────────────────────────────────
 function AuthLayout({ children, title, subtitle }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-campus-navy via-[#1a3560] to-[#0f2240] flex items-center justify-center p-4">
-      {/* Background decorative circles */}
+      {/* Decorative gradient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-campus-blue/10 blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-blue-400/10 blur-3xl" />
@@ -38,7 +38,7 @@ function AuthLayout({ children, title, subtitle }) {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Form Helpers ─────────────────────────────────────────────────────────────
 function InputField({ label, type = 'text', value, onChange, placeholder, error, autoComplete, required }) {
   return (
     <div>
@@ -98,17 +98,17 @@ function GoogleButton({ onClick, loading, label }) {
 
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
 export function LoginPage({ onNavigate }) {
-  const { signIn, signInAsDemo, signInWithGoogle, isDemoMode } = useAuth();
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const { signIn, signInWithGoogle } = useAuth();
+  const [email, setEmail]             = useState('');
+  const [password, setPassword]       = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
   const validate = () => {
     const errs = {};
-    if (!email) errs.email = 'Email is required.';
-    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Enter a valid email address.';
+    if (!email) errs.email = 'Email address is required.';
+    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Please enter a valid email address.';
     if (!password) errs.password = 'Password is required.';
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -122,19 +122,10 @@ export function LoginPage({ onNavigate }) {
     const { error: authError } = await signIn({ email, password });
     setLoading(false);
     if (authError) {
-      setError(authError.message || 'Sign in failed. Please check your credentials.');
+      setError(authError.message || 'Invalid email or password. Please check your credentials.');
     } else {
       onNavigate('home');
     }
-  };
-
-  const handleDemoSignIn = (targetPage = 'account-settings') => {
-    signInAsDemo({
-      fullName: 'Aarav Sharma',
-      email: email.trim() || 'aarav.sharma@student.campus.edu',
-      role: 'student'
-    });
-    onNavigate(targetPage);
   };
 
   const handleGoogle = async () => {
@@ -145,13 +136,7 @@ export function LoginPage({ onNavigate }) {
   };
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to access the Smart Campus Assistant">
-      {isDemoMode && (
-        <div className="mb-5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
-          <strong>Demo Mode:</strong> Supabase offline. Enter any email &amp; password to explore.
-        </div>
-      )}
-
+    <AuthLayout title="Student Sign In" subtitle="Sign in to access the Smart Campus Assistant">
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
           {error}
@@ -160,11 +145,11 @@ export function LoginPage({ onNavigate }) {
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <InputField
-          label="Email address"
+          label="College / Registered Email"
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          placeholder="you@student.campus.edu"
+          placeholder="your.email@campus.edu"
           error={fieldErrors.email}
           autoComplete="email"
           required
@@ -195,19 +180,7 @@ export function LoginPage({ onNavigate }) {
         <SubmitButton loading={loading} label="Sign In" loadingLabel="Signing in…" />
       </form>
 
-      {/* Instant Demo Landing Action */}
-      <div className="mt-4 pt-3 border-t border-campus-border">
-        <button
-          type="button"
-          onClick={() => handleDemoSignIn('account-settings')}
-          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 text-campus-blue font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs group"
-        >
-          <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
-          <span>Launch Demo Student Account &rarr; Open Profile</span>
-        </button>
-      </div>
-
-      <div className="relative my-4">
+      <div className="relative my-5">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-campus-border" />
         </div>
@@ -218,19 +191,19 @@ export function LoginPage({ onNavigate }) {
 
       <GoogleButton onClick={handleGoogle} loading={loading} label="Continue with Google" />
 
-      <p className="text-center text-sm text-campus-muted mt-5">
-        Don't have an account?{' '}
+      <p className="text-center text-sm text-campus-muted mt-6">
+        Don't have an account yet?{' '}
         <button onClick={() => onNavigate('signup')} className="text-campus-blue font-semibold hover:underline">
-          Create account
+          Create Account
         </button>
       </p>
     </AuthLayout>
   );
 }
 
-// ─── SIGNUP PAGE ──────────────────────────────────────────────────────────────
+// ─── SIGNUP (CREATE ACCOUNT) PAGE ─────────────────────────────────────────────
 export function SignupPage({ onNavigate }) {
-  const { signUp, signInAsDemo, signInWithGoogle, isDemoMode } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const [fullName, setFullName]       = useState('');
   const [email, setEmail]             = useState('');
   const [password, setPassword]       = useState('');
@@ -262,10 +235,10 @@ export function SignupPage({ onNavigate }) {
   const validate = () => {
     const errs = {};
     if (!fullName.trim()) errs.fullName = 'Full name is required.';
-    if (!email) errs.email = 'Email is required.';
-    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Enter a valid email address.';
+    if (!email) errs.email = 'Email address is required.';
+    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Please enter a valid email address.';
     if (!password) errs.password = 'Password is required.';
-    else if (password.length < 8) errs.password = 'Password must be at least 8 characters.';
+    else if (password.length < 8) errs.password = 'Password must be at least 8 characters long.';
     if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match.';
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -276,39 +249,42 @@ export function SignupPage({ onNavigate }) {
     setError('');
     if (!validate()) return;
 
-    if (isDemoMode) {
-      setError('Demo mode: sign up is not available. Use the Sign In page with any email.');
-      return;
-    }
-
     setLoading(true);
-    const { error: authError } = await signUp({ email, password, fullName });
+    const res = await signUp({ email, password, fullName });
     setLoading(false);
-    if (authError) {
-      setError(authError.message || 'Sign up failed. Please try again.');
+
+    if (res.error) {
+      setError(res.error.message || 'Registration failed. Please check your details and try again.');
+    } else if (res.sessionActive) {
+      // Instant login (email confirmation disabled in Supabase)
+      onNavigate('home');
     } else {
+      // Email confirmation required by Supabase
       setSuccess(true);
     }
   };
 
   if (success) {
     return (
-      <AuthLayout title="Check your email" subtitle="Almost there!">
+      <AuthLayout title="Account Created" subtitle="Verification email sent">
         <div className="text-center py-4">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <p className="text-campus-text text-sm mb-2">
-            We sent a verification email to <strong>{email}</strong>.
+          <p className="text-campus-text text-sm font-medium mb-2">
+            We sent a verification link to:
           </p>
-          <p className="text-campus-muted text-sm mb-6">
-            Click the link in the email to activate your account, then sign in.
+          <p className="text-campus-navy font-bold text-sm bg-slate-100 py-1.5 px-3 rounded-lg inline-block mb-3">
+            {email}
+          </p>
+          <p className="text-campus-muted text-xs mb-6 max-w-xs mx-auto">
+            Please click the link in your email to verify your student account, then sign in below.
           </p>
           <button
             onClick={() => onNavigate('login')}
-            className="w-full py-2.5 px-4 rounded-lg bg-campus-blue hover:bg-blue-700 text-white font-semibold text-sm transition-colors"
+            className="w-full py-2.5 px-4 rounded-lg bg-campus-blue hover:bg-blue-700 text-white font-semibold text-sm transition-colors shadow-sm"
           >
             Go to Sign In
           </button>
@@ -318,7 +294,7 @@ export function SignupPage({ onNavigate }) {
   }
 
   return (
-    <AuthLayout title="Create account" subtitle="Join the Smart Campus Assistant platform">
+    <AuthLayout title="Create Account" subtitle="Register for your Smart Campus student account">
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
           {error}
@@ -330,23 +306,23 @@ export function SignupPage({ onNavigate }) {
           label="Full name"
           value={fullName}
           onChange={e => setFullName(e.target.value)}
-          placeholder="Aarav Sharma"
+          placeholder="e.g. Aarav Sharma"
           error={fieldErrors.fullName}
           autoComplete="name"
           required
         />
         <InputField
-          label="Email address"
+          label="College / Personal Email"
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          placeholder="you@student.campus.edu"
+          placeholder="e.g. aarav@student.campus.edu"
           error={fieldErrors.email}
           autoComplete="email"
           required
         />
 
-        {/* Password with strength bar */}
+        {/* Password input with strength bar */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
           <input
@@ -362,7 +338,7 @@ export function SignupPage({ onNavigate }) {
           {password && (
             <div className="mt-2">
               <div className="flex gap-1 mb-1">
-                {[1,2,3,4].map(i => (
+                {[1, 2, 3, 4].map(i => (
                   <div
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-all ${
@@ -389,31 +365,11 @@ export function SignupPage({ onNavigate }) {
         />
 
         <p className="text-xs text-slate-400">
-          By creating an account, you agree to Smart Campus's terms. Your account will be created with
-          the <strong>Student</strong> role only.
+          Account registrations are granted the <strong>Student</strong> role. Staff and Admin accounts are assigned separately by university administration.
         </p>
 
         <SubmitButton loading={loading} label="Create Account" loadingLabel="Creating account…" />
       </form>
-
-      {/* Instant Demo Landing Action */}
-      <div className="mt-4 pt-3 border-t border-campus-border">
-        <button
-          type="button"
-          onClick={() => {
-            signInAsDemo({
-              fullName: fullName.trim() || 'Aarav Sharma',
-              email: email.trim() || 'aarav.sharma@student.campus.edu',
-              role: 'student'
-            });
-            onNavigate('account-settings');
-          }}
-          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 text-campus-blue font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs group"
-        >
-          <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
-          <span>Instant Demo Student Access &rarr; Open Profile</span>
-        </button>
-      </div>
 
       <div className="relative my-5">
         <div className="absolute inset-0 flex items-center">
@@ -429,7 +385,7 @@ export function SignupPage({ onNavigate }) {
       <p className="text-center text-sm text-campus-muted mt-5">
         Already have an account?{' '}
         <button onClick={() => onNavigate('login')} className="text-campus-blue font-semibold hover:underline">
-          Sign in
+          Sign In
         </button>
       </p>
     </AuthLayout>
@@ -459,7 +415,7 @@ export function ForgotPasswordPage({ onNavigate }) {
   };
 
   return (
-    <AuthLayout title="Reset password" subtitle="We'll email you a link to reset your password">
+    <AuthLayout title="Reset Password" subtitle="We'll email you a link to reset your password">
       {sent ? (
         <div className="text-center py-4">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
@@ -468,7 +424,7 @@ export function ForgotPasswordPage({ onNavigate }) {
             </svg>
           </div>
           <p className="text-campus-text text-sm mb-6">
-            If <strong>{email}</strong> is registered, you'll receive a password reset link shortly.
+            If <strong>{email}</strong> is registered, you will receive a password reset link shortly.
           </p>
           <button
             onClick={() => onNavigate('login')}
@@ -487,7 +443,7 @@ export function ForgotPasswordPage({ onNavigate }) {
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="you@student.campus.edu"
+            placeholder="your.email@campus.edu"
             autoComplete="email"
             required
           />

@@ -227,6 +227,10 @@ CREATE POLICY "Users can update their own profile"
 ON public.profiles FOR UPDATE 
 USING (auth.uid() = id);
 
+CREATE POLICY "Users and system can insert profile" 
+ON public.profiles FOR INSERT 
+WITH CHECK (auth.uid() = id OR public.is_staff() OR auth.role() = 'service_role');
+
 -- 11.2 CAMPUS BUILDINGS POLICIES (Publicly readable)
 CREATE POLICY "Campus buildings are viewable by everyone" 
 ON public.campus_buildings FOR SELECT 
